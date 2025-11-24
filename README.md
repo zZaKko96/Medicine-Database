@@ -1,68 +1,61 @@
-# Розрахунково-графічна робота з дисципліни «Бази Даних»
+# Медична система (Бази Даних)
 
-**Тема:** «Створення додатку бази даних, орієнтованого на взаємодію з СУБД PostgreSQL»
-
-**Виконав:** студент групи КВ-32, Косарук Захар 
-**GitHub:** `https://github.com/zZaKko96/Medicine-Database.git` 
+**Дисципліна:** «Бази Даних та засоби управління»
+**Виконав:** студент групи КВ-32, Косарук Захар  
+**Лабораторна робота №2:** «Засоби оптимізації роботи СУБД PostgreSQL»
 
 ## 1. Про проєкт
 
-Цей проєкт є консольним додатком на C# (.NET), який реалізує CRUD-операції (Create, Read, Update, Delete), складні пошукові запити та генерацію даних для бази даних у PostgreSQL.
+Цей проєкт є консольним додатком на C# (.NET), який демонструє роботу з базою даних PostgreSQL. Проєкт еволюціонував від використання "чистого" SQL до повноцінної ORM.
 
 Додаток розроблено за архітектурним шаблоном **MVC (Model-View-Controller)**:
-* **Model:** Відповідає за всю логіку взаємодії з базою даних (чисті SQL-запити через Npgsql).
+* **Model:** Реалізована через **Entity Framework Core**. Відповідає за взаємодію з БД через класи-сутності (ORM), а також містить методи для генерації масових даних.
 * **View:** Відповідає за відображення інформації в консолі (меню, списки, повідомлення).
-* **Controller:** Керує потоком програми, приймає ввід користувача та зв'язує Model і View.
+* **Controller:** Керує потоком програми, обробляє ввід користувача.
 
-## 2. Структура Бази Даних
+## 2. Функціонал (Лабораторна №2)
 
-**Тема БД:** «Медична система для збереження даних пацієнтів»
+У цій версії додано засоби оптимізації та контролю цілісності:
 
-### Сутності та їх атрибути
+1.  **ORM (Object-Relational Mapping):** * Перехід на **Entity Framework Core 8**.
+    * Реалізація CRUD-операцій через об'єкти C# замість SQL-рядків.
+2.  **Індекси (Optimization):**
+    * Досліджено та впроваджено індекси типів **Hash** (для точного пошуку) та **GIN** (для текстового пошуку `ILIKE` та агрегації).
+3.  **Тригери (Automation & Security):**
+    * Реалізовано тригер `BEFORE UPDATE/DELETE`.
+    * **Аудит:** Автоматичне збереження старої версії запису в таблицю `patient_log` перед зміною.
+    * **Бізнес-логіка:** Заборона видалення записів у певні дні тижня.
+4.  **Транзакції:**
+    * Демонстрація рівнів ізоляції: `READ COMMITTED`, `REPEATABLE READ`, `SERIALIZABLE`.
 
-* **Пацієнт** – сутність для запису даних пацієнтів (ім’я, прізвище, дата народження, контактний телефон).
-* **Лікар** – сутність для запису даних лікарів (ім’я, прізвище, спеціалізація, лікарня).
-* **Прийом** – сутність для запису існуючих прийомів між пацієнтом і лікарем (дата, час, діагноз, id пацієнта, id лікаря).
-* **Лікарня** – сутність для запису даних про лікарні (назва, адреса).
+## 3. Структура Бази Даних
 
-### ER-діаграма (Сутність-Зв'язок)
+**Тема:** «Медична система для збереження даних пацієнтів»
 
-`![ER-діаграма](db_scheme.png)`
+### Опис таблиць:
 
-### Реляційна схема (Фізична модель)
+* `public.patient` (Основна таблиця пацієнтів)
+    * `id` (PK), `name`, `surname`, `day of birth`, `phone`
+* `public.hospital` (Лікарні)
+    * `id` (PK), `name`, `address`
+* `public.doctor` (Лікарі)
+    * `id` (PK), `name`, `surname`, `specialization`
+    * `hospital_id` (FK -> hospital.id)
+* `public.appointment` (Прийоми - зв'язуюча таблиця)
+    * `id` (PK), `data`, `hour`, `diagnosis`
+    * `patient_id` (FK -> patient.id)
+    * `doctor_id` (FK -> doctor.id)
+* **`public.patient_log`** (Нова таблиця для аудиту)
+    * `log_id` (PK), `operation_type`, `operation_time`, `user_name`
+    * Зберігає копію полів пацієнта (`old_name`, `old_phone` тощо) перед зміною.
 
-`![Реляційна схема](db_scheme_pgadmin4.png)`
+### Діаграми
+`![ER-діаграма](db_scheme.png)`  
 
-**Опис таблиць:**
+## 4. Технології
 
-* `public.patient`
-    * `id` (integer, PK, AI)
-    * `name` (character varying(20))
-    * `surname` (character varying(20))
-    * `"day of birth"` (date)
-    * `phone` (character varying(10))
-* `public.hospital`
-    * `id` (integer, PK, AI)
-    * `name` (character varying(40))
-    * `address` (character varying(100))
-* `public.doctor`
-    * `id` (integer, PK, AI)
-    * `name` (character varying(20))
-    * `surname` (character varying(20))
-    * `specialization` (character varying(100))
-    * `hospital_id` (integer, FK -> hospital.id)
-* `public.appointment`
-    * `id` (integer, PK, AI)
-    * `data` (date)
-    * `hour` (time without time zone)
-    * `diagnosis` (character varying(50))
-    * `patient_id` (integer, FK -> patient.id)
-    * `doctor_id` (integer, FK -> doctor.id)
-
-
-## 3. Технології
-
-* **Мова:** C#
-* **Платформа:** .NET 8
-* **База даних:** PostgreSQL
-* **Бібліотека для БД:** Npgsql
+* **Мова:** C# (.NET 8)
+* **СУБД:** PostgreSQL 16/17
+* **ORM:** Entity Framework Core (Microsoft.EntityFrameworkCore)
+* **Провайдер БД:** Npgsql.EntityFrameworkCore.PostgreSQL
+* **IDE:** Visual Studio 2022 / pgAdmin 4
